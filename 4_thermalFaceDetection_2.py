@@ -13,35 +13,6 @@ import time,board,busio
 import adafruit_mlx90640
 import datetime as dt
 
-def gstreamer_pipeline(
-    #capture_width=3280,
-    #capture_height=2464,
-    capture_width=1640,
-    capture_height=1232,
-    display_width=640,
-    display_height=480,
-    framerate=29.999999,
-    flip_method=6,
-):
-    return (
-        "nvarguscamerasrc ! "
-        "video/x-raw(memory:NVMM), "
-        "width=(int)%d, height=(int)%d, "
-        "format=(string)NV12, framerate=(fraction)%d/1 ! "
-        "nvvidconv flip-method=%d ! "
-        "video/x-raw, width=(int)%d, height=(int)%d, format=(string)BGRx ! "
-        "videoconvert ! "
-        "video/x-raw, format=(string)BGR ! appsink"
-        % (
-            capture_width,
-            capture_height,
-            framerate,
-            flip_method,
-            display_width,
-            display_height,
-        )
-    )
-
 i2c = busio.I2C(board.SCL, board.SDA, frequency=400000) # setup I2C
 mlx = adafruit_mlx90640.MLX90640(i2c) # begin MLX90640 with I2C comm
 mlx.refresh_rate = adafruit_mlx90640.RefreshRate.REFRESH_16_HZ # 16Hz max
@@ -99,13 +70,14 @@ p1.daemon = True
 p1.start()
 
 print("[INFO] starting video stream...")
-cap = cv2.VideoCapture(gstreamer_pipeline(), cv2.CAP_GSTREAMER)
+cap = cv2.VideoCapture(0)
 time.sleep(2.0) # allow the camera sensor to warm up for 2 seconds
 fps = FPS().start()
 
 # loop over the frames from the video stream
 while True:
     ret, frame = cap.read()
+    frame = cv2.flip(frame, 1)
     (h, w) = frame.shape[:2]
     if inputQueue.empty(): inputQueue.put(frame)
     if not outputQueue.empty(): detections = outputQueue.get()
@@ -129,7 +101,8 @@ while True:
             if endTX <32 : endTX += 1
             if endTY <24 : endTY += 1
             tmax = t_img[startTY:endTY, startTX:endTX].max()
-            text = "Tmax={:.1f} C".format(tmax)
+            #text = "Tmax={:.1f} C".format(tmax)
+            text = "Tmax={:.1f} F".format(tmax*9/5 + 32)
             y = startY - 10 if startY - 10 > 10 else startY + 10
             cv2.rectangle(frame, (startX, startY), (endX, endY), (0, 0, 255), 2)
             cv2.putText(frame, text, (startX, y), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 2)

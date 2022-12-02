@@ -52,6 +52,7 @@ time.sleep(2.0) # allow the camera sensor to warm up for 2 seconds
 # loop over the frames from the video stream
 while True:
     ret, frame = cap.read()
+    frame = cv2.flip(frame, 1)
     # if the output queue *is not* empty, grab the detections
     if not outputQueue.empty():
         tframe = outputQueue.get()
